@@ -2167,19 +2167,19 @@ class IronicAPIVersionNotAvailable(NovaException):
     msg_fmt = _('Ironic API version %(version)s is not available.')
 
 
-class ZVMDriverException(NovaException):
-    msg_fmt = _("ZVM Driver has error: %(error)s")
+class HPVSDriverException(NovaException):
+    msg_fmt = _("HPVS Driver has error: %(error)s")
 
 
-class ZVMConnectorError(ZVMDriverException):
-    msg_fmt = _("zVM Cloud Connector request failed: %(results)s")
+class HPVSConnectorError(HPVSDriverException):
+    msg_fmt = _("HPVS Cloud Connector request failed: %(results)s")
 
     def __init__(self, message=None, **kwargs):
-        """Exception for zVM ConnectorClient calls.
+        """Exception for HPVS ConnectorClient calls.
 
-        :param results: The object returned from ZVMConnector.send_request.
+        :param results: The object returned from HPVSConnector.send_request.
         """
-        super(ZVMConnectorError, self).__init__(message=message, **kwargs)
+        super(HPVSConnectorError, self).__init__(message=message, **kwargs)
 
         results = kwargs.get('results', {})
         self.overallRC = results.get('overallRC')
