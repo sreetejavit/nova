@@ -34,13 +34,12 @@ from nova.virt import images
 from nova.virt.hpvs import guest
 from nova.virt.hpvs import hypervisor
 from nova.virt.hpvs import utils as hpvsutils
+from nova_dpm.virt.hpvs.ssc_client import SSCClient
 
 
 LOG = logging.getLogger(__name__)
 CONF = conf.CONF
 
-
-DEFAULT_EPH_DISK_FMT = 'ext3'
 
 
 class HPVSDriver(driver.ComputeDriver):
@@ -67,11 +66,19 @@ class HPVSDriver(driver.ComputeDriver):
     def __init__(self, virtapi):
         super(HPVSDriver, self).__init__(virtapi)
 
+        #Retrieve HPVS ca,key,url
+        #Ex: URL https://hursscb.hursley.ibm.com:21446/api/v1/lpars/HURSSCB
+        cert = CONF.hpvs.cert
+        ca_cert = CONF.hpvs.ca_cert
+        key = CONF.hpvs.key
+        url = CONF.hpvs.cloud_connector_url
+
+        # conf.URL = hursscb.hursley.ibm.com:21446
+
         self._validate_options()
 
-        self._hypervisor = hypervisor.Hypervisor(
-            CONF.hpvs.cloud_connector_url, ca_file=CONF.hpvs.ca_file)
-
+        self._sscclient_cache = SSCClient(url, ca_cert, cert, key)
+        return self._sscclient_cache
         LOG.info("The HPVS compute driver has been initialized.")
 
     @staticmethod
@@ -81,27 +88,12 @@ class HPVSDriver(driver.ComputeDriver):
                       'group to use compute_driver=hpvs.driver.HPVSDriver')
             raise exception.HPVSDriverException(error=error)
 
-        # Try a test to ensure length of give guest is smaller than 8
-        try:
-            _test_instance = CONF.instance_name_template % 0
-        except Exception:
-            msg = _("Template is not usable, the template defined is "
-                    "instance_name_template=%s") % CONF.instance_name_template
-            raise exception.HPVSDriverException(error=msg)
-
-        # For zVM instance, limit the maximum length of instance name to 8
-        if len(_test_instance) > 8:
-            msg = _("Can't spawn instance with template '%s', "
-                    "The HPVS hypervisor does not support instance names "
-                    "longer than 8 characters. Please change your config of "
-                    "instance_name_template.") % CONF.instance_name_template
-            raise exception.HPVSDriverException(error=msg)
 
     def init_host(self, host):
         pass
 
     def list_instances(self):
-        return self._hypervisor.list_names()
+        return SSCClient.list_instance()
 
     def instance_exists(self, instance):
         # z/VM driver returns name in upper case and because userid is

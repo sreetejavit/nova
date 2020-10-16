@@ -21,6 +21,7 @@ from nova.compute import power_state as compute_power_state
 from nova import conf
 from nova import exception
 from nova.virt.hpvs import utils as hpvsutils
+from nova.virt.hpvs import ssc_client as client
 
 
 LOG = logging.getLogger(__name__)
@@ -30,11 +31,10 @@ CONF = conf.CONF
 class Hypervisor(object):
     """HPVS implementation of Hypervisor."""
 
-    def __init__(self, zcc_url, ca_file=None):
+    def __init__(self, zcc_url):
         super(Hypervisor, self).__init__()
 
-        self._reqh = hpvsutils.ConnectorClient(zcc_url,
-                                              ca_file=ca_file)
+        self._reqh = client.SSCClient(zcc_url)
         host_info = self._get_host_info()
 
         # Very very unlikely the hostname will be changed, so when create
