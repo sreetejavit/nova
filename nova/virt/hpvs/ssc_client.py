@@ -94,8 +94,8 @@ class SSCClient(object):
         return resp
 
     @staticmethod
-    def _get(url, headers, expected_http_status, json=None, params=None,
-             data=None, cert, key, ca_cert):
+    def _get(url, cert, key, ca_cert, headers, expected_http_status, json=None, params=None,
+             data=None):
              #currently passing certificates is the only way of authentication
         LOG.debug(
             "Starting get to url %(url)s. Headers: %(headers)s, "
@@ -112,12 +112,12 @@ class SSCClient(object):
                                                        expected_http_status)
         return resp
 
-    def list_instance(self, ssc_lpar_name):
+    def list_instance(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert):
 
-        url = (self.URL+'/containers')
+        url = (hpvs_url+'/containers')
 
         resp = self._get(url=url, headers=headers, expected_http_status=200,
-                         params=params, cert=self.CERT, key=self.KEY, ca_cert=self.CACERT)
+                         params=params, cert=hpvs_cert, key=hpvs_key, ca_cert=hpvs_cacert)
         result = json.loads(resp.text)
         LOG.debug("List containers returned: %s", result)
         return result

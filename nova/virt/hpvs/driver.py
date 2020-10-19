@@ -22,9 +22,10 @@ from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+import nova.conf
 
 from nova.compute import task_states
-from nova import conf
+#from nova import conf
 from nova import exception
 from nova.i18n import _
 from nova.image import glance
@@ -34,11 +35,11 @@ from nova.virt import images
 from nova.virt.hpvs import guest
 from nova.virt.hpvs import hypervisor
 from nova.virt.hpvs import utils as hpvsutils
-from nova_dpm.virt.hpvs.ssc_client import SSCClient
-
+from nova.virt.hpvs.ssc_client import SSCClient
+from nova.virt.hpvs import conf
 
 LOG = logging.getLogger(__name__)
-CONF = conf.CONF
+CONF = nova.conf.CONF
 
 
 
@@ -67,23 +68,22 @@ class HPVSDriver(driver.ComputeDriver):
         super(HPVSDriver, self).__init__(virtapi)
 
         #Retrieve HPVS ca,key,url
-        #Ex: URL https://hursscb.hursley.ibm.com:21446/api/v1/lpars/HURSSCB
-        cert = CONF.hpvs.cert
-        ca_cert = CONF.hpvs.ca_cert
-        key = CONF.hpvs.key
-        url = CONF.hpvs.cloud_connector_url
+        #Ex: URL https://hursscb.hursley.ibm.com:21446/api/v1/lpars
+        cert = CONF.hpvs_cert
+        ca_cert = CONF.hpvs_ca_cert
+        key = CONF.hpvs_key
+        url = CONF.hpvs_cloud_connector_url
 
         # conf.URL = hursscb.hursley.ibm.com:21446
 
         self._validate_options()
 
         self._sscclient_cache = SSCClient(url, ca_cert, cert, key)
-        return self._sscclient_cache
         LOG.info("The HPVS compute driver has been initialized.")
 
     @staticmethod
     def _validate_options():
-        if not CONF.hpvs.cloud_connector_url:
+        if not CONF.hpvs_cloud_connector_url:
             error = _('Must specify cloud_connector_url in hpvs config '
                       'group to use compute_driver=hpvs.driver.HPVSDriver')
             raise exception.HPVSDriverException(error=error)
@@ -93,7 +93,13 @@ class HPVSDriver(driver.ComputeDriver):
         pass
 
     def list_instances(self):
-        return SSCClient.list_instance()
+        cert = CONF.hpvs_cert
+        ca_cert = CONF.hpvs_ca_cert
+        key = CONF.hpvs_key
+        url = CONF.hpvs_cloud_connector_url
+
+
+        return SSCClient.list_instance(url,cert,key,ca_cert)
 
     def instance_exists(self, instance):
         # z/VM driver returns name in upper case and because userid is
@@ -130,11 +136,12 @@ class HPVSDriver(driver.ComputeDriver):
         return res
 
     def get_available_nodes(self, refresh=False):
-        return self._hypervisor.get_available_nodes(refresh=refresh)
+        return ["openstackvm"]
+        #return self._hypervisor.get_available_nodes(refresh=refresh)
 
-    def get_info(self, instance, use_cache=True):
-        _guest = guest.Guest(self._hypervisor, instance)
-        return _guest.get_info()
+    #def get_info(self, instance, use_cache=True):
+    #    _guest = guest.Guest(self._hypervisor, instance)
+     #   return _guest.get_info()
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
