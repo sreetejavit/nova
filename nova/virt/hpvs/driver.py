@@ -147,7 +147,7 @@ class HPVSDriver(driver.ComputeDriver):
               admin_password, allocations, network_info=None,
               block_device_info=None, power_on=True, accel_info=None):
 
-        LOG.info("Spawning new instance %s on zVM hypervisor",
+        LOG.info("Spawning new instance %s using HM",
                  instance.name, instance=instance)
 
         if self._hypervisor.guest_exists(instance):
@@ -308,10 +308,15 @@ class HPVSDriver(driver.ComputeDriver):
 
     def destroy(self, context, instance, network_info=None,
                 block_device_info=None, destroy_disks=False):
-        if self._hypervisor.guest_exists(instance):
-            LOG.info("Destroying instance", instance=instance)
+        cert = CONF.hpvs_cert
+        ca_cert = CONF.hpvs_ca_cert
+        key = CONF.hpvs_key
+        url = CONF.hpvs_cloud_connector_url
+        inst_name = instance['name']
+        if SSCClient.instance_check(url,cert,key,ca_cert,inst_name):
+            LOG.info("Destroying instance", instance=inst_name)
             try:
-                self._hypervisor.guest_delete(instance.name)
+                self.SSCClient.instance_delete(inst_name)
             except exception.HPVSConnectorError as err:
                 if err.overallRC == 404:
                     LOG.info("instance disappear during destroying",
@@ -320,6 +325,7 @@ class HPVSDriver(driver.ComputeDriver):
                     raise
         else:
             LOG.warning("Instance does not exist", instance=instance)
+
 
     def get_host_uptime(self):
         return self._hypervisor.get_host_uptime()

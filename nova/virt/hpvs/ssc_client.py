@@ -108,16 +108,62 @@ class SSCClient(object):
                             data=data, verify=ca_cert, cert=(cert, key))
 
 
-        SSCClient._verify_response_and_raise_exception(resp,
+        #SSCClient._verify_response_and_raise_exception(resp,
                                                        expected_http_status)
+        return resp
+
+    @staticmethod
+    def _delete(url, cert, key, ca_cert, headers, expected_http_status, json=None, params=None,
+             data=None):
+             #currently passing certificates is the only way of authentication
+        LOG.debug(
+            "Starting get to url %(url)s. Headers: %(headers)s, "
+            "params: %(params)s, JSON: %(json)s, data: %(data)s.",
+            {"url": url, "headers": headers, "json": json,
+             "data": True if data else False, "params": params}
+        )
+
+        resp = requests.delete(url, headers=headers, json=json, params=params,
+                            data=data, verify=ca_cert, cert=(cert, key))
+
+
+        #SSCClient._verify_response_and_raise_exception(resp,
+         #                                              expected_http_status)
         return resp
 
     def list_instance(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert):
 
-        url = (hpvs_url+'/containers')
-
-        resp = self._get(url=url, headers=headers, expected_http_status=200,
-                         params=params, cert=hpvs_cert, key=hpvs_key, ca_cert=hpvs_cacert)
+        url = (hpvs_url)
+        _reqh = SSCClient(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert)
+        resp = _reqh._get(url=url, headers=None, expected_http_status=200,
+                         params=None, cert=hpvs_cert, key=hpvs_key, ca_cert=hpvs_cacert)
         result = json.loads(resp.text)
-        LOG.debug("List containers returned: %s", result)
-        return result
+        LOG.debug("List containers returned: %s", result['data'])
+        part_list = []
+        for partition in result['data']:
+            LOG.debug(partition)
+            part_list.append(partition)
+        LOG.debug("List containers returned: %s", part_list)
+        #listname.append(result['data']['name'])
+        return part_list
+
+    def instance_check(hpvs_url, hpvs_cert, hpvs_key, hpvs_cacert, hpvsname):
+        url = hpvs_url + '/' + name
+        _reqh = SSCClient(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert)
+        resp = _reqh._delete(url=url, headers=None, expected_http_status=200,
+                         params=None, cert=hpvs_cert, key=hpvs_key, ca_cert=hpvs_cacert)
+        if resp.status_code != expected_http_status:
+            return false
+
+        return true
+
+    def instance_delete(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert, name):
+
+        url = hpvs_url + '/' + name
+        _reqh = SSCClient(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert)
+        resp = _reqh._delete(url=url, headers=None, expected_http_status=200,
+                         params=None, cert=hpvs_cert, key=hpvs_key, ca_cert=hpvs_cacert)
+        if resp.status_code != expected_http_status:
+            LOG.debug("Container not deleted %s",name)
+
+        LOG.debug("Container successfully deleted")
