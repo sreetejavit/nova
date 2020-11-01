@@ -1,0 +1,39 @@
+
+
+nova list
++----+------+--------+------------+-------------+----------+
+| ID | Name | Status | Task State | Power State | Networks |
++----+------+--------+------------+-------------+----------+
+|9fb5|ibmz  | Up 8 we| None       | running     | nil      |
++----+------+--------+------------+-------------+----------+
+
+
+nova delete hmm
+b"No server with a name or ID of 'hmm' exists."
+ERROR (CommandError): Unable to delete the specified server(s).
+
+Upon successful delete
+nova delete <container_name>
+NO table shown
+
+nova boot --name HM_TEST2 --image <This option will be over written and we provide json in this place>
+
+
+
+
+curl inputs and console output
+```
+create
+root@openstackvm:/var/openstack# curl -X POST https://hursscb.hursley.ibm.com:21446/api/v1/lpars/HURSSCB/containers --cacert /var/openstack/ca-crt.pem --key /var/openstack/client-key.pem --cert /var/openstack/client-crt.pem --data @container.json -H "Content-Type: application/json"
+{"name":"HM_Test2","message":"Container is being provisioned on LPAR HURSSCB. Check the status using the container URI","uri":"/lpars/HURSSCB/containers/HM_Test2"}root@openstackvm:/var/openstack#
+List
+root@openstackvm:/var/openstack# curl -X GET https://hursscb.hursley.ibm.com:21446/api/v1/lpars/HURSSCB/containers --cacert /var/openstack/ca-crt.pem --key /var/openstack/client-key.pem --cert /var/openstack/client-crt.pem
+{"message":"Successfully retrieved list of containers","data":{"9fb56965ffa5746af4d56e29f15d0917c86e73d176f30c71d59a14b6d8b9e396":{"Image":"ibmzcontainers/hosting-manager:s390x-v1.5.6-fe7a365","Names":["/HostingManager"],"State":"running","Status":"Up 8 weeks"},"a476d98d46b8870e135f1a5f73292fcccebb3524aa8f2ef3cf13ee274592db04":{"Image":"ibmzcontainers/hosting-manager:s390x-v1.5.6-fe7a365","Names":["/HM_Test1"],"State":"running","Status":"Up 8 weeks"},"aa3c8f26db4192b8041d3e594251d76c8fc07bb4076a301c2eb1f96c2c81dc6f":{"Image":"ibmzcontainers/hosting-manager:s390x-v1.5.6-fe7a365","Names":[root@openstackvm:/var/openstack# ls
+delete
+curl -X DELETE https://hursscb.hursley.ibm.com:21446/api/v1/lpars/HURSSCB/containers/HM_Test2 --cacert /var/openstack/ca-crt.pem --key /var/openstack/client-key.pem --cert /var/openstack/client-crt.pem
+{"name":"HM_Test2","message":"Successfully deleted container HM_Test2"}
+get details of container
+
+curl -X GET https://hursscb.hursley.ibm.com:21446/api/v1/lpars/HURSSCB/containers/HM_Test2 --cacert /var/openstack/ca-crt.pem --key /var/openstack/client-key.pem --cert /var/openstack/client-crt.pem
+{"name":"HM_Test2","message":"Successfully retrieved container info for HM_Test2","data":2020-11-01T05:37:32.214046414Z","Status":"running"},"Status":"Up 39 minutes","currentState":"CREATED"},"status":{"currentState":{"message":"CREATED","last_update":"Nov 1st, 2020, 5:37:32 AM UTC"}}}root@openstackvm:/opt/stack/nova/nova/virt/hpvs#
+```
