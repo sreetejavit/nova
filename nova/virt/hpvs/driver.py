@@ -37,6 +37,7 @@ from nova.virt.hpvs import hypervisor
 from nova.virt.hpvs import utils as hpvsutils
 from nova.virt.hpvs.ssc_client import SSCClient
 from nova.virt.hpvs import conf
+from nova.virt.hpvs import const
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
@@ -75,7 +76,9 @@ class HPVSDriver(driver.ComputeDriver):
         url = CONF.hpvs_cloud_connector_url
 
         # conf.URL = hursscb.hursley.ibm.com:21446
-
+        self._hypervisor_hostname = 'openstackvm'
+        LOG.debug("The HPVS compute driver has been initialized.")
+        LOG.debug(CONF.my_ip)
         self._validate_options()
 
         self._sscclient_cache = SSCClient(url, ca_cert, cert, key)
@@ -101,58 +104,139 @@ class HPVSDriver(driver.ComputeDriver):
 
         return SSCClient.list_instance(url,cert,key,ca_cert)
 
-    def instance_exists(self, instance):
-        # z/VM driver returns name in upper case and because userid is
-        # stored instead of uuid, list_instance_uuids is not implemented
-        return self._hypervisor.guest_exists(instance)
+    def _get_host_status(self):
+        #TODO Implement this how HM get these details
+        #curl -X GET https://hursscb.hursley.ibm.com:21446/api/v1/lpars/HURSSCB
+        LOG.debug("Getting host status for %s", CONF.host)
 
-    def get_available_resource(self, nodename=None):
-        host_stats = self._hypervisor.get_available_resource()
+        host_status = {'host': CONF.host,
+                       'allowed_vm_type': const.ALLOWED_VM_TYPE}
+        host_status['vcpus'] = 5
+        host_status['vcpus_used'] = 2
+        host_status['cpu_info'] = 512
+        host_status['disk_total'] = 67
+        host_status['disk_used'] = 9
+        host_status['disk_available'] = 50
+        host_status['host_memory_total'] = 100
+        host_status['host_memory_free'] = 90
+        host_status['hypervisor_type'] = const.HYPERVISOR_TYPE
+        host_status['hypervisor_version'] = 'v3.2'
+        host_status['hypervisor_hostname'] = 'openstackvm'
+        host_status['supported_instances'] = [(const.ARCHITECTURE,
+                                               const.HYPERVISOR_TYPE,
+                                               obj_fields.VMMode.HVM)]
+        host_status['ipl_time'] = 'TESTTIME'
+        return host_status
 
-        hypervisor_hostname = self._hypervisor.get_available_nodes()[0]
+
+    def get_available_resource(self, nodename='openstackvm'):
+        #TODO Implement this how HM get these details
+        LOG.debug("Getting available resource for %s", CONF.host)
+
+        #try:
+        #    host_stats = self._reqh.call('host_get_info')
+        #except exception.NovaException:
+        host_stats = {'host': CONF.host,
+                       'allowed_vm_type': const.ALLOWED_VM_TYPE}
+        host_stats['vcpus'] = 5
+        host_stats['vcpus_used'] = 2
+        host_stats['cpu_info'] = 512
+        host_stats['disk_total'] = 67
+        host_stats['disk_used'] = 9
+        host_stats['disk_available'] = 50
+        host_stats['host_memory_total'] = 100
+        host_stats['host_memory_free'] = 90
+        host_stats['hypervisor_type'] = const.HYPERVISOR_TYPE
+        host_stats['hypervisor_version'] = 'v3.2'
+        host_stats['hypervisor_hostname'] = 'openstackvm'
+        host_stats['supported_instances'] = [(const.ARCHITECTURE,
+                                               const.HYPERVISOR_TYPE,
+                                               obj_fields.VMMode.HVM)]
+        host_stats['ipl_time'] = 'TESTTIME'
+
+
         res = {
             'vcpus': host_stats.get('vcpus', 0),
             'memory_mb': host_stats.get('memory_mb', 0),
             'local_gb': host_stats.get('disk_total', 0),
-            'vcpus_used': host_stats.get('vcpus_used', 0),
+            'vcpus_used': 0,
             'memory_mb_used': host_stats.get('memory_mb_used', 0),
             'local_gb_used': host_stats.get('disk_used', 0),
-            'hypervisor_type': host_stats.get('hypervisor_type',
-                                              obj_fields.HVType.HPVS),
-            'hypervisor_version': host_stats.get('hypervisor_version', 0),
-            'hypervisor_hostname': host_stats.get('hypervisor_hostname',
-                                                  hypervisor_hostname),
+            'hypervisor_type': host_stats.get('hypervisor_type', 'zvm'),
+            'hypervisor_version': host_stats.get('hypervisor_version', ''),
+            'hypervisor_hostname': host_stats.get('hypervisor_hostname', ''),
             'cpu_info': jsonutils.dumps(host_stats.get('cpu_info', {})),
             'disk_available_least': host_stats.get('disk_available', 0),
-            'supported_instances': [(obj_fields.Architecture.S390X,
-                                     obj_fields.HVType.HPVS,
+            'supported_instances': [(const.ARCHITECTURE,
+                                     const.HYPERVISOR_TYPE,
                                      obj_fields.VMMode.HVM)],
             'numa_topology': None,
         }
-
-        LOG.debug("Getting available resource for %(host)s:%(nodename)s",
-                  {'host': CONF.host, 'nodename': nodename})
-
-        return res
+        respo = {}
+        LOG.debug(res)
+        return host_stats
 
     def get_available_nodes(self, refresh=False):
-        return ["openstackvm"]
+        return [self._hypervisor_hostname]
+
+
+
+    def get_info(self, instance):
+        """Get the current status of an instance."""
+        #TODO GET container  API call need to be made here
+        """
+        power_stat = ''
+        try:
+            power_stat = self._reqh.call('guest_get_power_state',
+                                         instance['name'])
+        except exception.NovaException as err:
+            if err.kwargs['results']['overallRC'] == 404:
+                # instance not exists
+                LOG.warning("Get power state of non-exist instance: %s",
+                            instance['name'])
+                raise exception.InstanceNotFound(instance_id=instance['name'])
+            else:
+                raise
+
+        power_stat = self._mapping_power_stat(power_stat)
+        """
+        _instance_info = 'Running'
+
+        return _instance_info
+
+    def _instance_exists(self, instance_name):
+        """Overwrite this to using instance name as input parameter."""
+        return instance_name.upper() in self.list_instances()
+
+    def instance_exists(self, instance):
+        """Overwrite this to using instance name as input parameter."""
+        return self._instance_exists(instance.name)
+
+    def get_available_resource(self, nodename='openstackvm'):
+        pass
+
+    #def get_available_nodes(self, refresh=False):
+     #   return ["openstackvm"]
         #return self._hypervisor.get_available_nodes(refresh=refresh)
 
     #def get_info(self, instance, use_cache=True):
     #    _guest = guest.Guest(self._hypervisor, instance)
      #   return _guest.get_info()
 
-    def spawn(self, context, instance, image_meta, injected_files,
+    def spawn(self, context, instance, injected_files, image_meta,
               admin_password, allocations, network_info=None,
               block_device_info=None, power_on=True, accel_info=None):
 
-        LOG.info("Spawning new instance %s using HM",
+        LOG.info("Spawning new instance %s on HPVS hypervisor",
                  instance.name, instance=instance)
-
-        if self._hypervisor.guest_exists(instance):
+        cert = CONF.hpvs_cert
+        ca_cert = CONF.hpvs_ca_cert
+        key = CONF.hpvs_key
+        url = CONF.hpvs_cloud_connector_url
+        inst_name = instance.name
+        if SSCClient.instance_check(url,cert,key,ca_cert,inst_name):
             raise exception.InstanceExists(name=instance.name)
-
+        """
         os_distro = image_meta.properties.get('os_distro')
         if os_distro is None or len(os_distro) == 0:
             reason = _("The `os_distro` image metadata property is required")
@@ -192,6 +276,7 @@ class HPVSDriver(driver.ComputeDriver):
             spawn_time = time.time() - spawn_start
             LOG.info("Instance spawned successfully in %s seconds",
                      spawn_time, instance=instance)
+
         except Exception as err:
             with excutils.save_and_reraise_exception():
                 LOG.error("Deploy instance %(instance)s "
@@ -204,6 +289,9 @@ class HPVSDriver(driver.ComputeDriver):
                 except Exception:
                     LOG.exception("Failed to destroy instance",
                                   instance=instance)
+        """
+        SSCClient.instance_create(url,cert,key,ca_cert,inst_name,injected_files)
+
 
     @lockutils.synchronized('IMAGE_INFO_SEMAPHORE')
     def _get_image_info(self, context, image_meta_id, os_distro):
@@ -326,9 +414,10 @@ class HPVSDriver(driver.ComputeDriver):
         else:
             LOG.warning("Instance does not exist", instance=instance)
 
-
     def get_host_uptime(self):
         return self._hypervisor.get_host_uptime()
+    def _get_host(self):
+        return ''.join([pwd.getpwuid(os.geteuid()).pw_name, '@', CONF.my_ip])
 
     def snapshot(self, context, instance, image_id, update_task_state):
 
@@ -424,7 +513,30 @@ class HPVSDriver(driver.ComputeDriver):
         return self._hypervisor.guest_get_console_output(instance.name)
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
-        resources = self._hypervisor.get_available_resource()
+        resources = self.get_available_resource()
+        host_status = {'host': CONF.host,
+                       'allowed_vm_type': 's390x'}
+        host_status['vcpus'] = 5
+        host_status['vcpus_used'] = 2
+        host_status['cpu_info'] = 512
+        host_status['disk_total'] = 67
+        host_status['disk_used'] = 9
+        host_status['disk_available'] = 50
+        host_status['host_memory_total'] = 100
+        host_status['host_memory_free'] = 90
+        host_status['hypervisor_type'] = 'HPVS'
+        host_status['hypervisor_version'] = 2
+        host_status['hypervisor_hostname'] = 'openstackvm'
+        host_status['memory_mb'] = 8084
+        host_status['local_gb'] = 120
+        host_status['memory_mb_used'] = 1024
+        host_status['local_gb_used'] = 4
+        host_status['numa_topology'] = None
+        #host_status['supported_instances'] = [(const.ARCHITECTURE,
+        #                                       const.HYPERVISOR_TYPE,
+        #                                       obj_fields.VMMode.HVM)]
+        host_status['ipl_time'] = 'TESTTIME'
+        resources = host_status
 
         inventory = provider_tree.data(nodename).inventory
         allocation_ratios = self._get_allocation_ratios(inventory)

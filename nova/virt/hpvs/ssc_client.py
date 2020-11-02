@@ -109,9 +109,9 @@ class SSCClient(object):
 
 
         #SSCClient._verify_response_and_raise_exception(resp,
-                                                       expected_http_status)
+         #                                              expected_http_status)
         return resp
-
+    
     @staticmethod
     def _delete(url, cert, key, ca_cert, headers, expected_http_status, json=None, params=None,
              data=None):
@@ -165,5 +165,17 @@ class SSCClient(object):
                          params=None, cert=hpvs_cert, key=hpvs_key, ca_cert=hpvs_cacert)
         if resp.status_code != expected_http_status:
             LOG.debug("Container not deleted %s",name)
-
+        
         LOG.debug("Container successfully deleted")
+
+    def instance_create(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert, name, injected_files):
+
+        url = hpvs_url + '/' + name
+        _reqh = SSCClient(hpvs_url,hpvs_cert, hpvs_key, hpvs_cacert)
+        resp = _reqh._post(url=url, headers=None, expected_http_status=200,
+                         data=injected_files, cert=hpvs_cert, key=hpvs_key, ca_cert=hpvs_cacert)
+        if resp.status_code != expected_http_status:
+            LOG.debug("Container not created %s",name)
+
+        LOG.debug("Container successfully created")
+
